@@ -39,6 +39,13 @@ class OrdersTable
                         'en_camino' => 'warning',
                         'entregado' => 'success',
                         'cancelado' => 'danger',
+                    })
+                    ->icon(fn(string $state): string => match ($state) {
+                        'pendiente' => 'heroicon-m-clock',
+                        'confirmado' => 'heroicon-m-check-circle',
+                        'en_camino' => 'heroicon-m-truck',
+                        'entregado' => 'heroicon-m-home',
+                        'cancelado' => 'heroicon-m-x-circle',
                     }),
                 TextColumn::make('payment_status')
                     ->label('Pago')
@@ -47,6 +54,11 @@ class OrdersTable
                         'liquidado' => 'success',
                         'abonado' => 'warning',
                         'pendiente' => 'danger',
+                    })
+                    ->icon(fn(string $state): string => match ($state) {
+                        'liquidado' => 'heroicon-m-check-badge',
+                        'abonado' => 'heroicon-m-currency-dollar',
+                        'pendiente' => 'heroicon-m-exclamation-circle',
                     }),
                 TextColumn::make('monthlyClosure.month')
                     ->label('Mes')
