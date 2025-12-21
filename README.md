@@ -1,59 +1,120 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="docs/images/banner.png" alt="Gestión de Pedidos Banner" width="100%">
 </p>
 
-## About Laravel
+# Sistema de Gestión de Pedidos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel)
+![Filament](https://img.shields.io/badge/Filament-4.x-FDAE4B?style=for-the-badge&logo=filament)
+![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php)
+![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-06B6D4?style=for-the-badge&logo=tailwindcss)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Descripción del Sistema
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+El **Sistema de Gestión de Pedidos** es una plataforma web robusta y moderna diseñada para optimizar el flujo completo de ventas y administración de inventario. Construido sobre la potencia de **Laravel 12** y la elegancia de **Filament 4**, este sistema ofrece una interfaz intuitiva y eficiente para administradores, empleados y clientes.
 
-## Learning Laravel
+El enfoque arquitectónico del sistema es híbrido, aprovechando lo mejor de la lógica de aplicación en PHP y la integridad de datos a nivel de base de datos mediante **Triggers, Vistas y Procedimientos Almacenados** en MySQL.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## ✨ Características Principales
 
-## Laravel Sponsors
+### 🔐 Control de Acceso Basado en Roles (RBAC)
+Sistema de seguridad granular gestionado con `spatie/laravel-permission`:
+- **Super Admin**: Control total del sistema y configuraciones.
+- **Administrador**: Gestión operativa completa (Usuarios, Productos, Reportes).
+- **Empleado**: Procesamiento de pedidos y atención al cliente.
+- **Cliente**: Portal de autoservicio para realizar y rastrear sus propios pedidos.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 📦 Gestión de Productos Avanzada
+- Catálogo completo con soporte para imágenes y categorización.
+- Control de unidades de medida (Piezas, Cajas).
+- **Conversión Automática**: Cálculo inteligente de precios y cantidades basado en la selección (Caja vs Pieza).
+- Control de inventario en tiempo real.
 
-### Premium Partners
+### 🛒 Flujo de Pedidos Eficiente
+- Interfaz de creación de pedidos optimizada ("Point of Sale" style).
+- Selección de productos visual con avatares circulares y detalles claros.
+- Cálculo automático de subtotales, impuestos y totales.
+- Sincronización de zona horaria (`America/Mexico_City`) para registros precisos.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 📊 Dashboard y Reportes
+- Widgets interactivos para visualización de métricas clave (Ventas del día, Pedidos pendientes, etc.).
+- Vistas personalizadas según el rol del usuario.
+- Reportes exportables.
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🏗️ Stack Tecnológico y Arquitectura
 
-## Code of Conduct
+### Backend & Core
+- **Framework**: Laravel 12
+- **Admin Panel**: FilamentPHP 4.0
+- **Base de Datos**: MySQL (Estructura Relacional Normalizada)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Frontend & UI
+- **Estilos**: TailwindCSS
+- **Componentes**: Blade + Filament Components
+- **Interactividad**: Alpine.js / Livewire
 
-## Security Vulnerabilities
+### Arquitectura de Datos ("Hybrid Core")
+A diferencia de los sistemas tradicionales MVC, este proyecto delega lógica crítica a la base de datos para garantizar la integridad:
+- **Triggers**: Automatización de movimientos de inventario y actualizaciones de estado tras la creación de pedidos.
+- **Vistas (Views)**: Abstracción de reportes complejos y agregaciones de datos para un acceso rápido.
+- **Foreign Keys**: Integridad referencial estricta.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## 🚀 Instalación y Configuración
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Sigue estos pasos para desplegar el proyecto en tu entorno local:
+
+1.  **Clonar el Repositorio**
+    ```bash
+    git clone https://github.com/tu-usuario/gestion_pedidos.git
+    cd gestion_pedidos
+    ```
+
+2.  **Instalar Dependencias**
+    ```bash
+    composer install
+    npm install
+    ```
+
+3.  **Configurar Entorno**
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    *Configura tus credenciales de base de datos en el archivo `.env`.*
+
+4.  **Base de Datos y Migraciones**
+    El sistema incluye migraciones que configuran tanto las tablas como los triggers y vistas.
+    ```bash
+    php artisan migrate --seed
+    ```
+    *El seeder creará los roles y el usuario Super Admin inicial.*
+
+5.  **Compilar Assets**
+    ```bash
+    npm run dev
+    ```
+
+6.  **Iniciar Servidor**
+    ```bash
+    php artisan serve
+    ```
+    Accede al panel administrativo en: `http://localhost:8000/admin`
+
+---
+
+## 🖼️ Galería (Próximamente)
+
+> Espacio reservado para capturas de pantalla del Dashboard, Formulario de Pedidos y Listado de Productos.
+
+---
+
+<p align="center">
+    Desarrollado con ❤️ usando Laravel y Filament.
+</p>
