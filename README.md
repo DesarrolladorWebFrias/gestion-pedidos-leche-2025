@@ -116,5 +116,5 @@ Sigue estos pasos para desplegar el proyecto en tu entorno local:
 ---
 
 <p align="center">
-    Desarrollado con ❤️ usando Laravel y Filament.
+    Desarrollado Luis Frias usando Laravel y Filament.
 </p>
