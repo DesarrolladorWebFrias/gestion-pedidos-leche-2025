@@ -34,41 +34,7 @@ class PaymentForm
                             ->live()
                             ->afterStateUpdated(fn ($state, $set) => $set('order_id', $state))
                             ->required(),
-                        \Filament\Forms\Components\Placeholder::make('payment_stats')
-                            ->label('Estado de Cuenta del Pedido')
-                            ->content(function ($get) {
-                                $orderId = $get('order_id');
-                                if (! $orderId) {
-                                    return 'Seleccione un pedido para ver el saldo.';
-                                }
-                                $order = Order::find($orderId);
-                                if (! $order) {
-                                    return 'Pedido no encontrado.';
-                                }
 
-                                $totalPaid = $order->payments()->where('transaction_status', 'completado')->sum('payment_amount');
-                                $remaining = $order->total_amount - $totalPaid;
-                                
-                                $color = $remaining > 0 ? 'text-danger-600' : 'text-success-600';
-                                
-                                return new \Illuminate\Support\HtmlString("
-                                    <div class='grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg'>
-                                        <div>
-                                            <span class='text-sm text-gray-500'>Total del Pedido</span>
-                                            <div class='text-lg font-bold'>$ " . number_format($order->total_amount, 2) . "</div>
-                                        </div>
-                                        <div>
-                                            <span class='text-sm text-gray-500'>Total Abonado</span>
-                                            <div class='text-lg font-bold text-success-600'>$ " . number_format($totalPaid, 2) . "</div>
-                                        </div>
-                                        <div>
-                                            <span class='text-sm text-gray-500'>Saldo Pendiente</span>
-                                            <div class='text-lg font-bold $color'>$ " . number_format($remaining, 2) . "</div>
-                                        </div>
-                                    </div>
-                                ");
-                            })
-                            ->columnSpanFull(),
                         DateTimePicker::make('payment_date')
                             ->label('Fecha de Pago')
                             ->default(now())
@@ -99,7 +65,9 @@ class PaymentForm
                                 'pendiente' => 'Pendiente',
                                 'fallido' => 'Fallido',
                             ])
-                            ->default('completado')
+                            ->default('pendiente')
+                            ->disabled()
+                            ->dehydrated()
                             ->required(),
                         FileUpload::make('receipt_url')
                             ->label('Comprobante')

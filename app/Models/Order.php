@@ -16,6 +16,7 @@ class Order extends Model
         'estimated_delivery_date',
         'actual_delivery_date',
         'total_amount',
+        'pending_amount',
         'order_status',
         'payment_method',
         'payment_status',
