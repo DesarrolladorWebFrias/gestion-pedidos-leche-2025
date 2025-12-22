@@ -9,11 +9,14 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class OrdersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['user', 'monthlyClosure']))
             ->columns([
                 TextColumn::make('id')
                     ->label('# Pedido')

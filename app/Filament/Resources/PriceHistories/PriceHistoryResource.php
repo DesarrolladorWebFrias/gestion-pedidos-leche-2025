@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\PriceHistories;
 
-use App\Filament\Resources\PriceHistories\Pages\CreatePriceHistory;
-use App\Filament\Resources\PriceHistories\Pages\EditPriceHistory;
 use App\Filament\Resources\PriceHistories\Pages\ListPriceHistories;
 use App\Filament\Resources\PriceHistories\Schemas\PriceHistoryForm;
 use App\Filament\Resources\PriceHistories\Tables\PriceHistoriesTable;
@@ -18,9 +16,20 @@ class PriceHistoryResource extends Resource
 {
     protected static ?string $model = PriceHistory::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
-    protected static ?string $recordTitleAttribute = 'php artisan make:filament-resource Product';
+    protected static ?string $navigationLabel = 'Historial de Precios';
+
+    protected static ?string $modelLabel = 'Historial de Precio';
+
+    protected static ?string $pluralModelLabel = 'Historial de Precios';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return true;
+    }
+
+    protected static ?string $recordTitleAttribute = 'product.name';
 
     public static function form(Schema $schema): Schema
     {
@@ -43,8 +52,11 @@ class PriceHistoryResource extends Resource
     {
         return [
             'index' => ListPriceHistories::route('/'),
-            'create' => CreatePriceHistory::route('/create'),
-            'edit' => EditPriceHistory::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
     }
 }
