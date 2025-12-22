@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -61,6 +62,7 @@ class ProductsTable
                     ]),
             ])
             ->recordActions([
+                // History action removed
                 EditAction::make(),
             ])
             ->toolbarActions([

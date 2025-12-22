@@ -8,4 +8,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMonthlyClosure extends CreateRecord
 {
     protected static string $resource = MonthlyClosureResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

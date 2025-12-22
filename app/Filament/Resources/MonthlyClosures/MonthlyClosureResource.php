@@ -18,7 +18,7 @@ class MonthlyClosureResource extends Resource
 {
     protected static ?string $model = MonthlyClosure::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
     protected static ?string $recordTitleAttribute = 'php artisan make:filament-resource MonthlyClosure';
 
