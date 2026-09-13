@@ -1,240 +1,318 @@
-<p align="center">
-  <img src="docs/images/banner.png" alt="Gestión de Pedidos Banner" width="100%">
-</p>
+# Sistema de Bitácora Digital y Control de Extracción/Despacho de Leche por Períodos Mensuales
 
-# 📦 Sistema de Gestión de Pedidos y Trazabilidad de Distribución
-### Plataforma Transaccional en Laravel 12 & Filament 4 con Integridad Automatizada por Triggers en MySQL
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![Filament](https://img.shields.io/badge/Filament-v4-ECA700?style=for-the-badge&logo=laravel&logoColor=black)
+![MySQL Triggers](https://img.shields.io/badge/MySQL-InnoDB%20Native%20Triggers-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![License](https://img.shields.io/badge/License-Proprietary-blue?style=for-the-badge)
 
-[![Laravel Version](https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel)](https://laravel.com)
-[![Filament Version](https://img.shields.io/badge/Filament-4.x-FDAE4B?style=for-the-badge&logo=filament)](https://filamentphp.com)
-[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php)](https://php.net)
-[![MySQL Version](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql)](https://mysql.com)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+Sistema corporativo de grado industrial desarrollado para el control estricto de **bitácoras de extracción, despacho y cobranza de dotaciones de leche** por períodos mensuales en plantas y centros de distribución de **Liconsa**. 
 
----
-
-## 📌 1. Resumen Ejecutivo & Problemática de Negocio Resuelta
-
-En empresas de consumo masivo y distribución comercial (CEDIS, abarroteras y redes de tiendas), la recepción y surtido de pedidos diarios presenta riesgos operativos críticos:
-- **Desfase de Inventario:** Cuando los promotores o tiendas levantan pedidos de forma concurrente, el cálculo de existencias en la capa web tradicional puede generar *ventas fantasma* o sobreventa si dos usuarios solicitan las últimas unidades al mismo segundo.
-- **Falta de Trazabilidad:** Desconocer en qué momento exacto un pedido pasó de almacén al camión de reparto (`EN_RUTA`) o si fue devuelto.
-- **Carga Excesiva al Servidor:** Consultas pesadas repetitivas para reportes de liquidación por ruta.
-
-### 💡 La Solución: Arquitectura "Hybrid Core"
-Este sistema resuelve el problema desacoplando la lógica de presentación en **Laravel 12 + Filament 4** y delegando la integridad transaccional crítica directamente al motor de base de datos **MySQL 8.0** mediante **Triggers deterministas, Vistas Transaccionales indexadas y Transacciones ACID**.
+Construido sobre una arquitectura **Hybrid Core (Laravel 12 + Filament v4 + Triggers y Vistas Nativas en MySQL InnoDB)**, garantiza que las reglas críticas de negocio (bloqueo por toma física de inventario, sumatorias de pedidos, cálculo reactivo de saldos en abonos y auditoría histórica de precios) se ejecuten a nivel de motor de base de datos, evitando fallas por concurrencia o manipulación externa.
 
 ---
 
-## 🏗️ 2. Flujo del Ciclo de Vida del Pedido & Disparadores (Triggers)
+## 🎯 Caso de Uso y Problemática Operativa
 
-El siguiente diagrama ilustra el flujo de datos exacto y el momento preciso en que los **Triggers en MySQL** toman el control para garantizar que el stock de almacén nunca se descuadre:
+En plantas procesadoras y centros de acopio lácteos, la entrega de producto a empleados, rutas y beneficiarios institucionales requiere un control milimétrico:
+* **Extracciones no autorizadas fuera de período:** Retiros de producto cuando el mes fiscal ya fue cerrado contablemente.
+* **Fuga de producto durante tomas físicas de inventario:** Cuando el almacén entra en conteo físico, cualquier salida descalibra los balances auditados.
+* **Cobranza parcial o en abonos:** Empleados y puntos de retiro reciben dotaciones que liquidan en parcialidades (efectivo o transferencia). Si la aplicación web falla al calcular el saldo pendiente (`pending_amount`), se generan discrepancias contables.
+* **Falta de trazabilidad física:** Incapacidad de auditar con precisión **quién autorizó la extracción** en sistema y **qué bodeguero entregó físicamente el producto** en patio.
+
+---
+
+## 🔄 Flujo Operativo Exacto de la Bitácora (End-to-End)
 
 ```mermaid
-flowchart TD
-    subgraph Capa_Usuario["📱 Capa de Aplicación (Laravel 12 / Filament 4)"]
-        A([Promotor / Cliente genera Pedido]) --> B[Validación FormRequest & Precios]
-        B --> C[Inicio de Transacción ACID: DB::beginTransaction]
+sequenceDiagram
+    autonumber
+    actor Admin as 👔 Administrador / Jefe de Planta
+    actor Solicitante as 👷 Solicitante / Empleado
+    actor Bodega as 📦 Bodeguero / Despachador
+    participant App as 🖥️ Panel Filament / Laravel
+    participant Trigger as ⚡ Triggers MySQL InnoDB
+    participant DB as 🗄️ Tablas Transaccionales
+
+    Note over Admin, DB: FASE 1: Apertura de Período Mensual
+    Admin->>App: Abre nuevo período en 'monthly_closures' (ej. Mes 09, 2026)
+    App->>DB: closure_status = 'abierto', in_inventory = FALSE
+
+    Note over Solicitante, DB: FASE 2: Registro en Bitácora de Extracción
+    Solicitante->>App: Registra solicitud de leche (Cajas / Piezas por SKU)
+    App->>Trigger: Intent de INSERT en 'orders'
+    Trigger->>Trigger: TRIGGER 'validate_monthly_closure'
+    alt ¿Mes cerrado o in_inventory = TRUE?
+        Trigger-->>App: ERROR SQLSTATE '45000' (Extracción bloqueada)
+    else Período válido y abierto
+        Trigger->>DB: Autoriza INSERT en 'orders'
     end
 
-    subgraph Capa_BD["🗄️ Motor de Base de Datos (MySQL 8.0 - Triggers Nativos)"]
-        C --> D[(INSERT en tabla: pedidos)]
-        D --> E[(INSERT en tabla: detalle_pedidos)]
-        
-        E --> T1{⚡ Trigger: trg_validar_stock_before_insert}
-        T1 -->|Stock Insuficiente| Err[SIGNAL SQLSTATE 45000: 'Stock Insuficiente']
-        Err --> Rollback[DB::rollBack - Se cancela la operación]
-        
-        T1 -->|Stock Disponible| T2[⚡ Trigger: trg_descontar_stock_after_insert]
-        T2 --> UpdStock[UPDATE productos SET stock = stock - NEW.cantidad]
-        T2 --> Audit[INSERT INTO kardex_auditoria: Registro de salida automática]
-        
-        UpdStock --> Commit[DB::commit - Pedido Confirmado]
-    end
+    App->>Trigger: INSERT partidas en 'order_details'
+    Trigger->>Trigger: TRIGGER 'before_insert_order_detail' (Valida producto no agotado)
+    Trigger->>Trigger: TRIGGER 'calculate_order_total_insert' (Recalcula total_amount en 'orders')
 
-    subgraph Logistica_Almacen["🚚 Logística, Despacho y Contingencias"]
-        Commit --> Despacho[Almacén prepara carga de camión]
-        Despacho --> EstadoRuta[Estado: EN_RUTA para Chofer]
-        EstadoRuta --> Entrega[Estado: ENTREGADO]
-        
-        EstadoRuta -->|Cancelación / Devolución| Cancel[Estado: CANCELADO]
-        Cancel --> T3[⚡ Trigger: trg_reincorporar_stock_after_update]
-        T3 --> Restock[UPDATE productos SET stock = stock + OLD.cantidad]
-        T3 --> AuditCancel[INSERT INTO kardex_auditoria: Reingreso por cancelación]
+    Note over Bodega, DB: FASE 3: Autorización y Entrega Física
+    Admin->>App: Confirma solicitud (confirmed_by_user_id, confirmation_date)
+    Bodega->>App: Entrega producto físico en bodega (delivered_by_user_id, delivery_date)
+    App->>DB: order_status pasa a 'entregado'
+
+    Note over Solicitante, DB: FASE 4: Cobranza y Abonos Reactivos
+    Solicitante->>App: Realiza abono en efectivo o transferencia bancaria
+    App->>DB: INSERT en 'payments' (payment_amount, transaction_status = 'completado')
+    DB->>Trigger: TRIGGER 'trigger_update_order_on_payment_insert'
+    Trigger->>DB: Recalcula: pending_amount = total_amount - SUM(payments)
+    Trigger->>DB: Actualiza payment_status ('pendiente' -> 'abonado' -> 'liquidado')
+
+    Note over Admin, DB: FASE 5: Toma de Inventario y Cierre Mensual
+    opt Toma Física de Inventario
+        Admin->>App: Activa switch 'in_inventory = TRUE' (Bloquea nuevas extracciones de inmediato)
     end
+    Admin->>App: Procesa Cierre Mensual ('monthly_closures' -> 'cerrado'/'procesado')
+    App->>DB: Cierra período contable, totalizando litros extraídos y cobros recuperados
 ```
 
 ---
 
-## 💻 3. Implementación Real de Triggers en MySQL
+## ⚡ Lógica de Integridad en Triggers Nativos (MySQL Engine)
 
-A continuación se detalla la lógica SQL implementada en las migraciones de base de datos que garantiza la consistencia del inventario a nivel de motor:
+A diferencia de desarrollos convencionales que delegan la lógica financiera a controladores PHP, este sistema implementa **Triggers nativos en MySQL** para blindar la operación:
 
-### Trigger 1: Descuento Automático de Stock y Auditoría en Kardex
+### 1. Validación de Período Mensual y Bloqueo de Inventario Físico
+Impide terminantemente el alta de órdenes si el período no está activo o si el almacén está en recuento físico:
+
 ```sql
-DELIMITER $$
-
-CREATE TRIGGER trg_descontar_stock_despues_pedido
-AFTER INSERT ON detalle_pedidos
-FOR EACH ROW
-BEGIN
-    -- 1. Descuenta automáticamente las unidades del producto en almacén
-    UPDATE productos 
-    SET stock = stock - NEW.cantidad,
-        updated_at = NOW()
-    WHERE id = NEW.producto_id;
-
-    -- 2. Registra el movimiento en la bitácora transaccional (Kardex)
-    INSERT INTO kardex_movimientos (
-        producto_id, 
-        tipo_movimiento, 
-        cantidad, 
-        referencia_origen, 
-        pedido_id, 
-        created_at
-    ) VALUES (
-        NEW.producto_id, 
-        'SALIDA_VENTA_PEDIDO', 
-        NEW.cantidad, 
-        CONCAT('Pedido N°: ', NEW.pedido_id), 
-        NEW.pedido_id, 
-        NOW()
-    );
-END$$
-
-DELIMITER ;
-```
-
-### Trigger 2: Reincorporación de Stock ante Cancelaciones
-```sql
-DELIMITER $$
-
-CREATE TRIGGER trg_restaurar_stock_al_cancelar_pedido
-AFTER UPDATE ON pedidos
-FOR EACH ROW
-BEGIN
-    -- Si el pedido pasa de un estado activo a CANCELADO, devuelve las piezas al almacén
-    IF NEW.estado = 'CANCELADO' AND OLD.estado != 'CANCELADO' THEN
-        UPDATE productos p
-        INNER JOIN detalle_pedidos dp ON p.id = dp.producto_id
-        SET p.stock = p.stock + dp.cantidad,
-            p.updated_at = NOW()
-        WHERE dp.pedido_id = NEW.id;
-
-        INSERT INTO kardex_movimientos (producto_id, tipo_movimiento, cantidad, referencia_origen, created_at)
-        SELECT dp.producto_id, 'REINGRESO_POR_CANCELACION', dp.cantidad, CONCAT('Cancelación Pedido N°: ', NEW.id), NOW()
-        FROM detalle_pedidos dp
-        WHERE dp.pedido_id = NEW.id;
+CREATE TRIGGER `validate_monthly_closure` 
+BEFORE INSERT ON `orders` 
+FOR EACH ROW BEGIN
+    DECLARE estado_cierre VARCHAR(20);
+    DECLARE modo_inventario BOOLEAN;
+    
+    SELECT `closure_status`, `in_inventory` 
+    INTO estado_cierre, modo_inventario
+    FROM `monthly_closures` 
+    WHERE `id` = NEW.`monthly_closure_id`;
+    
+    IF estado_cierre IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Período mensual no válido';
+    ELSEIF estado_cierre != 'abierto' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: El período está cerrado contablemente';
+    ELSEIF modo_inventario = TRUE THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Sistema bloqueado temporalmente por inventario físico en planta';
     END IF;
-END$$
-
-DELIMITER ;
+END;
 ```
 
----
-
-## 📊 4. Vistas SQL Transaccionales para Distribución y Rutas
-
-Para evitar sobrecargar el servidor web calculando reportes repetitivos de cientos de pedidos de promotores, el sistema utiliza **Vistas SQL Materializadas/Indexadas**:
+### 2. Recálculo Reactivo de Saldo Insoluto y Estatus de Pago
+Al registrar un abono en `payments`, MySQL recalcula en tiempo real el saldo pendiente y actualiza el estatus del pedido (`pendiente`, `abonado` o `liquidado`):
 
 ```sql
-CREATE OR REPLACE VIEW vw_resumen_pedidos_por_ruta AS
-SELECT 
-    p.id AS pedido_id,
-    p.numero_folio,
-    u.name AS promotor_cliente,
-    r.nombre_ruta,
-    p.estado,
-    p.total,
-    COUNT(dp.id) AS total_articulos,
-    SUM(dp.cantidad) AS total_unidades_surtidas,
-    p.created_at AS fecha_creacion
-FROM pedidos p
-INNER JOIN users u ON p.user_id = u.id
-LEFT JOIN rutas r ON p.ruta_id = r.id
-INNER JOIN detalle_pedidos dp ON p.id = dp.pedido_id
-GROUP BY p.id, p.numero_folio, u.name, r.nombre_ruta, p.estado, p.total, p.created_at;
+CREATE TRIGGER `trigger_update_order_on_payment_insert` 
+AFTER INSERT ON `payments` 
+FOR EACH ROW BEGIN
+    -- 1. Actualiza el importe insoluto en la orden
+    UPDATE `orders` 
+    SET `pending_amount` = `total_amount` - (
+        SELECT COALESCE(SUM(`payment_amount`), 0) 
+        FROM `payments` 
+        WHERE `order_id` = NEW.`order_id` 
+        AND `transaction_status` = 'completado'
+    )
+    WHERE `id` = NEW.`order_id`;
+
+    -- 2. Asigna atómicamente el nuevo estatus de liquidación
+    UPDATE `orders`
+    SET `payment_status` = (
+        CASE 
+            WHEN `pending_amount` <= 0 THEN 'liquidado'
+            WHEN `pending_amount` < `total_amount` THEN 'abonado'
+            ELSE 'pendiente'
+        END
+    )
+    WHERE `id` = NEW.`order_id`;
+END;
 ```
-*Tiempo promedio de respuesta de la vista:* **< 45 milisegundos** incluso con miles de registros de pedidos.
+
+### 3. Recálculo Automático del Monto Total por Detalle
+Cada partida agregada, editada o eliminada en `order_details` dispara la sincronización del acumulado general:
+
+```sql
+CREATE TRIGGER `calculate_order_total_insert` 
+AFTER INSERT ON `order_details` 
+FOR EACH ROW BEGIN
+    UPDATE `orders` 
+    SET `total_amount` = (
+        SELECT SUM(`subtotal`) 
+        FROM `order_details` 
+        WHERE `order_id` = NEW.`order_id`
+    ) 
+    WHERE `id` = NEW.`order_id`;
+END;
+```
+
+### 4. Auditoría Inmutable de Precios (`price_history`)
+Cualquier actualización en el precio oficial del catálogo de leche queda registrada automáticamente para efectos de auditoría gubernamental:
+
+```sql
+CREATE TRIGGER `after_update_products_price` 
+AFTER UPDATE ON `products` 
+FOR EACH ROW BEGIN
+    IF OLD.`current_unit_price` != NEW.`current_unit_price` THEN
+        INSERT INTO `price_history` (
+            `product_id`, `previous_price`, `new_price`, `changed_by_user_id`
+        ) VALUES (
+            NEW.`id`, OLD.`current_unit_price`, NEW.`current_unit_price`, COALESCE(NEW.`updated_by_user_id`, 1)
+        );
+    END IF;
+END;
+```
 
 ---
 
-## 🔐 5. Control de Acceso Granular Basado en Roles (RBAC)
+## 🏛️ Modelo de Datos y Vistas SQL de Auditoría
 
-Gestionado mediante `spatie/laravel-permission` con 4 niveles de privilegio:
+```mermaid
+erDiagram
+    MONTHLY_CLOSURES ||--o{ ORDERS : "agrupa en período"
+    USERS ||--o{ ORDERS : "solicita"
+    USERS ||--o{ ORDERS : "confirma"
+    USERS ||--o{ ORDERS : "entrega en bodega"
+    ORDERS ||--o{ ORDER_DETAILS : "desglosa"
+    PRODUCTS ||--o{ ORDER_DETAILS : "artículo"
+    ORDERS ||--o{ PAYMENTS : "recibe abonos"
+    PRODUCTS ||--o{ PRICE_HISTORY : "audita histórico"
 
-| Rol | Alcance Operativo | Permisos Clave |
+    MONTHLY_CLOSURES {
+        int id PK
+        int month
+        int year
+        string closure_status "abierto | cerrado | procesado"
+        boolean in_inventory "bloqueo de planta"
+        decimal total_collected
+        int processed_orders
+    }
+
+    ORDERS {
+        int id PK
+        int user_id FK
+        int monthly_closure_id FK
+        decimal total_amount
+        decimal pending_amount
+        string order_status "pendiente | confirmado | en_camino | entregado | cancelado"
+        string payment_status "pendiente | abonado | liquidado"
+        int confirmed_by_user_id FK
+        datetime confirmation_date
+        int delivered_by_user_id FK
+        datetime delivery_date
+    }
+
+    ORDER_DETAILS {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        string quantity_type "caja | pieza"
+        decimal unit_price_at_order
+        decimal subtotal
+    }
+
+    PAYMENTS {
+        int id PK
+        int order_id FK
+        decimal payment_amount
+        string payment_method_used "efectivo | transferencia"
+        string transaction_status "completado | pendiente | fallido"
+        string transfer_reference
+    }
+```
+
+### Vistas SQL Optimizadas para Reportería Institucional:
+* **`view_monthly_sales`:** Resumen consolidado del mes fiscal: total de pedidos, clientes únicos, cajas totales, piezas sueltas, importe entregado y total recaudado.
+* **`view_payment_status`:** Matriz de saldos por empleado/solicitante: total asignado, abonos completados, balance insoluto y estatus textual.
+* **`view_order_details_complete`:** Sábana de auditoría que cruza solicitud, entrega física en bodega con usuario responsable y comparativa de precio del día vs. precio actual.
+* **`view_available_products`:** Catálogo de productos disponibles con desglose dinámico de precio por caja y precio por pieza individual.
+
+---
+
+## 💻 Stack Tecnológico
+
+| Capa | Tecnología | Función |
 | :--- | :--- | :--- |
-| **Super Admin** | Configuración Global | Gestión de usuarios, roles, migraciones de base de datos y auditoría de Triggers. |
-| **Administrador** | Operaciones & Finanzas | Alta de productos, precios, rutas de distribución, asignación de promotores y reportes. |
-| **Almacenista / Empleado** | Almacén y Despacho | Confirmación de surtido de pedidos, validación física de stock y cambio de estado a `EN_RUTA`. |
-| **Cliente / Promotor** | Punto de Venta Móvil | Levantamiento de pedidos en campo, consulta de histórico de compras y estado de entrega. |
+| **Backend Core** | PHP 8.2+ / Laravel 12.x | Lógica de controladores, modelos Eloquent, migraciones y seeders. |
+| **Panel Administrativo** | Filament v4 | Interfaz reactiva para altas de bitácora, widgets de ventas y tablas de auditoría. |
+| **Integridad & Reglas** | MySQL InnoDB Triggers | Validación de bloqueos de inventario y recálculo de importes a nivel de motor. |
+| **Consultas Analíticas** | Vistas Nativas SQL | Reportes mensuales agregados de extracción y liquidación sin sobrecargar PHP. |
+| **Seguridad y Acceso** | Spatie Laravel-Permission | Roles institucionales: Administrador, Auditor, Almacenista y Solicitante. |
+| **Frontend & Estilos** | Tailwind CSS / Vite 6 | Estilos modernos, responsivos y componentes visuales ligeros. |
 
 ---
 
-## 📦 6. Gestión de Unidades de Medida Dual (Cajas vs. Piezas)
+## 🚀 Instalación y Despliegue Local
 
-Diseñado especialmente para distribución y abarroteras:
-- Soporte para **Cajas completas** y **Piezas sueltas**.
-- **Factor de Conversión Automático:** Si un producto viene en caja de 12 o 24 unidades, el sistema calcula de forma dinámica el precio unitario y descuenta el equivalente en piezas exactas del inventario de almacén sin intervención del usuario.
+### Requisitos Previos:
+- **PHP** >= 8.2 con extensiones `pdo_mysql`, `mbstring`, `openssl`, `bcmath`, `curl`.
+- **Composer** >= 2.x
+- **MySQL** >= 8.0 o **MariaDB** >= 10.5 (con soporte completo para Triggers y Views).
+- **Node.js** >= 18.x y **NPM**.
 
----
+### Pasos:
 
-## 🚀 7. Instalación y Despliegue Local
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/DesarrolladorWebFrias/gestion-pedidos-leche-2025.git
+   cd gestion-pedidos-leche-2025
+   ```
 
-### Prerrequisitos
-- PHP 8.2 o superior (con extensiones `pdo_mysql`, `mbstring`, `openssl`).
-- Composer 2.x.
-- Node.js 18+ y NPM.
-- Servidor MySQL 8.0+.
+2. **Instalar dependencias de PHP:**
+   ```bash
+   composer install
+   ```
 
-### Paso 1: Clonar el repositorio
-```bash
-git clone https://github.com/DesarrolladorWebFrias/gestion-pedidos-leche-2025.git
-cd gestion-pedidos-leche-2025
-```
+3. **Configurar variables de entorno:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-### Paso 2: Instalar dependencias backend y frontend
-```bash
-composer install
-npm install
-```
+4. **Configurar la base de datos en `.env`:**
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=bitacora_pedidos_leche
+   DB_USERNAME=root
+   DB_PASSWORD=tu_password
+   ```
 
-### Paso 3: Configurar variables de entorno
-```bash
-cp .env.example .env
-php artisan key:generate
-```
-*Configura tu conexión a MySQL en `.env`:*
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=gestion_pedidos_db
-DB_USERNAME=root
-DB_PASSWORD=tu_password
-```
+5. **Ejecutar migraciones (genera tablas, triggers y vistas automáticamente):**
+   ```bash
+   php artisan migrate --seed
+   ```
 
-### Paso 4: Ejecutar migraciones con Triggers y Seeders
-```bash
-php artisan migrate --seed
-```
-*Esto creará las tablas, los roles iniciales y disparará la creación de los Triggers y Vistas en MySQL.*
+6. **Compilar assets del frontend:**
+   ```bash
+   npm install
+   npm run build
+   ```
 
-### Paso 5: Compilar assets y levantar servidor
-```bash
-npm run build
-php artisan serve
-```
-Accede al panel administrativo en: `http://localhost:8000/admin`
+7. **Iniciar servidor local:**
+   ```bash
+   php artisan serve
+   ```
+   *Acceder al panel de administración en: `http://127.0.0.1:8000/admin`*
 
 ---
 
-## 👨‍💻 Autor y Contacto
+## 👨‍💻 Autor y Desarrollador
 
 **Lic. Luis Andrés López Frías**  
-*Licenciado en Sistemas Computacionales | Full Stack Developer & Database Specialist*  
-- **GitHub:** [github.com/DesarrolladorWebFrias](https://github.com/DesarrolladorWebFrias)  
-- **GitLab:** [gitlab.com/luisandreslopezfrias23](https://gitlab.com/luisandreslopezfrias23)  
-- **LinkedIn:** [linkedin.com/in/luis-andres-lopez-frías-dev](https://www.linkedin.com/in/luis-andres-lopez-fr%C3%ADas-dev/)  
-- **Ubicación:** Nacajuca / Villahermosa, Tabasco, México
+*Licenciado en Sistemas Computacionales | Especialista Full Stack & Bases de Datos Transaccionales*  
+- **GitHub:** [@DesarrolladorWebFrias](https://github.com/DesarrolladorWebFrias)  
+- **GitLab:** [@luisandreslopezfrias23](https://gitlab.com/luisandreslopezfrias23)  
+- **Enfoque Técnico:** Sistemas Críticos de Cadena de Suministro, ERPs Corporativos, Triggers SQL y Arquitecturas Offline-First  
+- **Ubicación:** Villahermosa, Tabasco, México
